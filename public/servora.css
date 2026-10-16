@@ -1,0 +1,91 @@
+/* Servora - stilul comun al tuturor paginilor.
+   Culorile sunt definite o singura data aici (in :root), ca sa le poti
+   schimba usor mai tarziu: de ex. --pink e culoarea principala. */
+:root{
+  --bg:#0d090f;
+  --bg-2:#150e17;
+  --surface:#1b1220;
+  --surface-2:#251829;
+  --line:rgba(255,255,255,.08);
+  --line-strong:rgba(255,255,255,.16);
+  --text:#f7eff4;
+  --muted:#a8979f;
+  --pink:#ff2e7e;
+  --pink-2:#ff5d9a;
+  --pink-soft:rgba(255,46,126,.14);
+  --green:#34d27b;
+  --green-soft:rgba(52,210,123,.14);
+  --red:#ff5a5f;
+  --red-soft:rgba(255,90,95,.14);
+  --amber:#ffb547;
+  --radius:18px;
+  --font-display:'Sora',system-ui,sans-serif;
+  --font-body:'Manrope',system-ui,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  background-image:radial-gradient(120% 60% at 50% -10%, rgba(255,46,126,.16), transparent 60%);
+  background-attachment:fixed;
+  color:var(--text);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.15;letter-spacing:-.01em;}
+a{color:var(--pink-2);}
+[hidden]{display:none!important;}
+button,input{font-family:inherit;font-size:inherit;}
+button{cursor:pointer;}
+
+/* Logo */
+.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--pink);display:grid;place-items:center;box-shadow:0 6px 20px rgba(255,46,126,.35);}
+.brand-mark svg{width:19px;height:19px;}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:1.15rem;letter-spacing:-.02em;}
+
+/* Carduri si butoane */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;}
+.eyebrow{font-size:.74rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--pink-2);}
+.muted{color:var(--muted);}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:0;border-radius:14px;padding:15px 20px;font-weight:800;
+  background:var(--pink);color:#fff;text-decoration:none;
+  box-shadow:0 8px 24px rgba(255,46,126,.3);
+  transition:transform .08s ease, filter .15s ease;
+}
+.btn:hover{filter:brightness(1.08);}
+.btn:active{transform:scale(.98);}
+.btn[disabled]{opacity:.55;cursor:default;}
+.btn-block{width:100%;}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line-strong);box-shadow:none;}
+.btn-green{background:var(--green);color:#06210f;box-shadow:0 8px 24px rgba(52,210,123,.25);}
+.btn-small{padding:9px 13px;border-radius:11px;font-size:.88rem;box-shadow:none;}
+
+.field{display:block;margin-bottom:14px;}
+.field span{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.input{
+  width:100%;background:var(--bg-2);color:var(--text);
+  border:1.5px solid var(--line-strong);border-radius:12px;padding:13px 14px;outline:none;
+}
+.input:focus{border-color:var(--pink);box-shadow:0 0 0 4px var(--pink-soft);}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:800;padding:5px 11px;border-radius:999px;}
+.pill-pending{background:rgba(255,181,71,.13);color:var(--amber);}
+.pill-ready{background:var(--green-soft);color:var(--green);}
+.pill-done{background:var(--line);color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.pill-ready .dot,.pill-pending .dot{animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{50%{opacity:.3;}}
+
+.error{color:var(--red);font-weight:700;font-size:.9rem;margin:10px 0 0;}
+
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);
+  background:#fff;color:#1b1220;font-weight:700;padding:12px 18px;border-radius:12px;
+  opacity:0;pointer-events:none;transition:.25s ease;max-width:calc(100% - 32px);text-align:center;z-index:50;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}

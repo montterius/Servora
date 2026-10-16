@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Servora · Administrare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/servora.css">
+<style>
+  .wrap{max-width:860px;margin:0 auto;padding:18px 16px 40px;}
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  h1{font-size:1.5rem;margin-bottom:4px;}
+  h2{font-size:1.1rem;margin-bottom:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .hint-small{font-size:.8rem;color:var(--muted);margin:-8px 0 14px;}
+  .list{display:grid;gap:12px;margin-top:12px;}
+  .rest{display:flex;gap:16px;align-items:center;}
+  .rest img{width:92px;height:92px;border-radius:12px;background:#fff;padding:5px;flex:none;}
+  .rest .info{flex:1;min-width:0;}
+  .rest .name{font-family:var(--font-display);font-weight:800;font-size:1.1rem;}
+  .rest .link{font-size:.85rem;word-break:break-all;}
+  .rest .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .rest.off{opacity:.55;}
+  .tag{font-size:.72rem;font-weight:800;padding:3px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;}
+  .tag.on{background:var(--green-soft);color:var(--green);}
+  .tag.offt{background:var(--red-soft);color:var(--red);}
+  @media (max-width:620px){ .grid2{grid-template-columns:1fr;} .rest{align-items:flex-start;} .rest img{width:72px;height:72px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span><span class="brand-name">Servora</span></a>
+    <button class="btn btn-ghost btn-small" id="logout" hidden>Ieși</button>
+  </header>
+
+  <section id="key-view" class="card" style="max-width:420px;margin:6vh auto 0;" hidden>
+    <h1>Administrare</h1>
+    <p class="muted" style="margin:0 0 18px;">Scrie cheia de admin (valoarea ADMIN_KEY din Render).</p>
+    <form id="key-form">
+      <label class="field"><span>Cheie admin</span><input class="input" id="key" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-block" type="submit">Intră</button>
+      <p class="error" id="key-error" hidden></p>
+    </form>
+  </section>
+
+  <section id="admin-view" hidden>
+    <h1>Restaurante</h1>
+    <p class="muted" style="margin:0 0 20px;">Fiecare restaurant primește un cont pentru panou și un cod QR propriu.</p>
+
+    <form class="card" id="create-form" autocomplete="off">
+      <h2>＋ Restaurant nou</h2>
+      <div class="grid2">
+        <label class="field"><span>Nume restaurant (îl vede clientul)</span><input class="input" id="c-name" placeholder="Burger Bar" required></label>
+        <label class="field"><span>Link (opțional)</span><input class="input" id="c-slug" placeholder="burger-bar"></label>
+      </div>
+      <p class="hint-small">Link-ul devine adresa din QR: …/r/<b id="slug-preview">burger-bar</b>. Dacă îl lași gol, îl facem din nume.</p>
+      <div class="grid2">
+        <label class="field"><span>Utilizator pentru panou</span><input class="input" id="c-user" placeholder="burgerbar" autocapitalize="none" required></label>
+        <label class="field"><span>Parolă (minim 6 caractere)</span><input class="input" id="c-pass" minlength="6" required></label>
+      </div>
+      <button class="btn" type="submit">Creează restaurantul</button>
+      <p class="error" id="c-error" hidden></p>
+    </form>
+
+    <div class="list" id="list"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var KEY = 'servora_admin_key';
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function safeGet(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }
+  function safeSet(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} }
+  function safeRemove(k){ try{ sessionStorage.removeItem(k); }catch(e){} }
+  var toastTimer;
+  function toast(msg){ var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2800); }
+
+  var adminKey = safeGet(KEY);
+
+  function api(path, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({'Content-Type':'application/json', 'x-admin-key': adminKey || ''}, opts.headers || {});
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(body){
+        if(!r.ok){ var e = new Error(body.error || 'eroare'); e.status = r.status; e.code = body.error; throw e; }
+        return body;
+      });
+    });
+  }
+
+  function slugify(t){
+    return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  }
+  function updatePreview(){ $('slug-preview').textContent = slugify($('c-slug').value || $('c-name').value) || 'burger-bar'; }
+  $('c-name').addEventListener('input', updatePreview);
+  $('c-slug').addEventListener('input', updatePreview);
+
+  function showKey(msg){
+    $('key-view').hidden = false; $('admin-view').hidden = true; $('logout').hidden = true;
+    if(msg){ $('key-error').textContent = msg; $('key-error').hidden = false; }
+  }
+  function showAdmin(){ $('key-view').hidden = true; $('admin-view').hidden = false; $('logout').hidden = false; }
+
+  $('logout').addEventListener('click', function(){ adminKey = null; safeRemove(KEY); showKey(); });
+
+  $('key-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    adminKey = $('key').value.trim();
+    load().then(function(ok){ if(ok){ safeSet(KEY, adminKey); $('key').value = ''; } });
+  });
+
+  function load(){
+    return api('/api/admin/restaurants').then(function(list){
+      showAdmin();
+      render(list);
+      return true;
+    }).catch(function(e){
+      showKey(e.status === 401 ? 'Cheie greșită.' : 'Nu ne-am putut conecta la server.');
+      return false;
+    });
+  }
+
+  function render(list){
+    var box = $('list'); box.innerHTML = '';
+    if(list.length === 0){ box.innerHTML = '<div class="card muted" style="text-align:center;">Încă nu ai niciun restaurant. Creează primul mai sus.</div>'; return; }
+    list.forEach(function(r){
+      var url = location.origin + '/r/' + r.slug;
+      var el = document.createElement('div');
+      el.className = 'card rest' + (r.active ? '' : ' off');
+      el.innerHTML =
+        '<img alt="Cod QR ' + esc(r.name) + '" src="/qr/' + encodeURIComponent(r.slug) + '.png?size=240">' +
+        '<div class="info">' +
+          '<div class="name">' + esc(r.name) + (r.active ? '<span class="tag on">ACTIV</span>' : '<span class="tag offt">OPRIT</span>') + '</div>' +
+          '<div class="muted" style="font-size:.85rem;">Utilizator: <b>' + esc(r.username) + '</b></div>' +
+          '<a class="link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a>' +
+          '<div class="row">' +
+            '<a class="btn btn-small" href="/print.html?slug=' + encodeURIComponent(r.slug) + '" target="_blank" rel="noopener">🖨️ Card de printat</a>' +
+            '<a class="btn btn-ghost btn-small" href="/qr/' + encodeURIComponent(r.slug) + '.png?size=1000" download="servora-qr-' + esc(r.slug) + '.png">⬇️ Doar QR</a>' +
+            '<button class="btn btn-ghost btn-small" data-act="pass">🔑 Parolă nouă</button>' +
+            '<button class="btn btn-ghost btn-small" data-act="toggle">' + (r.active ? 'Oprește' : 'Pornește') + '</button>' +
+          '</div>' +
+        '</div>';
+      el.querySelector('[data-act="toggle"]').addEventListener('click', function(){
+        if(r.active && !confirm('Oprești „' + r.name + '”? Codul QR și panoul nu vor mai funcționa până îl pornești din nou.')) return;
+        api('/api/admin/restaurants/' + r.id + '/toggle', { method:'POST' }).then(load).catch(function(){ toast('Nu a mers.'); });
+      });
+      el.querySelector('[data-act="pass"]').addEventListener('click', function(){
+        var p = prompt('Parola nouă pentru „' + r.name + '” (minim 6 caractere):');
+        if(!p) return;
+        api('/api/admin/restaurants/' + r.id + '/password', { method:'POST', body: JSON.stringify({password: p}) })
+          .then(function(){ toast('Parola a fost schimbată.'); })
+          .catch(function(e){ toast(e.code === 'parola_scurta' ? 'Parola e prea scurtă.' : 'Nu a mers.'); });
+      });
+      box.appendChild(el);
+    });
+  }
+
+  $('create-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var err = $('c-error'); err.hidden = true;
+    api('/api/admin/restaurants', { method:'POST', body: JSON.stringify({
+      name: $('c-name').value, slug: $('c-slug').value, username: $('c-user').value, password: $('c-pass').value
+    })}).then(function(r){
+      ['c-name','c-slug','c-user','c-pass'].forEach(function(id){ $(id).value = ''; });
+      updatePreview();
+      toast('„' + r.name + '” a fost creat.');
+      load();
+    }).catch(function(e){
+      err.textContent = e.code === 'user_existent' ? 'Există deja un restaurant cu acest utilizator.'
+        : e.code === 'parola_scurta' ? 'Parola trebuie să aibă minim 6 caractere.'
+        : e.code === 'date_lipsa' ? 'Completează numele, utilizatorul și parola.' : 'Nu a mers. Încearcă din nou.';
+      err.hidden = false;
+    });
+  });
+
+  if(adminKey) load(); else showKey();
+})();
+</script>
+</body>
+</html>

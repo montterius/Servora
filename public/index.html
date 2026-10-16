@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d090f">
+<title>Servora · Clientul e anunțat pe telefon când comanda e gata</title>
+<meta name="description" content="Servora anunță clienții pe propriul telefon când comanda e gata. Fără pagere, fără ecrane, fără aplicație — doar un cod QR.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/servora.css">
+<style>
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0;}
+
+  .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:48px 0 70px;}
+  .hero h1{font-size:clamp(2.4rem,5.5vw,4rem);font-weight:800;letter-spacing:-.03em;margin:14px 0 18px;}
+  .hero h1 em{font-style:normal;color:var(--pink);}
+  .hero .lead{font-size:1.15rem;color:var(--muted);max-width:30em;margin:0 0 28px;}
+  .hero .ctas{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* Telefonul desenat din CSS */
+  .phone{
+    width:270px;height:540px;margin:0 auto;border-radius:44px;padding:14px;position:relative;
+    background:#1f1622;border:1px solid var(--line-strong);
+    box-shadow:0 40px 90px rgba(255,46,126,.22), inset 0 0 0 2px rgba(255,255,255,.04);
+  }
+  .screen{height:100%;border-radius:32px;overflow:hidden;position:relative;
+    background:linear-gradient(170deg,#2c1a2b,#120b14 60%);padding:46px 14px 14px;}
+  .screen .clock{text-align:center;font-family:var(--font-display);font-weight:700;font-size:3.2rem;color:#fff;opacity:.95;}
+  .screen .date{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:36px;}
+  .notif{background:rgba(40,26,40,.92);border:1px solid rgba(255,46,126,.4);border-radius:18px;padding:12px;display:flex;gap:10px;align-items:flex-start;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);animation:drop 3.2s ease-in-out infinite;}
+  .notif .brand-mark{width:34px;height:34px;flex:none;box-shadow:none;}
+  .notif .t{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);font-weight:700;}
+  .notif .h{font-weight:800;font-size:.95rem;margin:1px 0;}
+  .notif .s{font-size:.78rem;color:var(--muted);}
+  @keyframes drop{0%,12%{transform:translateY(-14px);opacity:0;}22%,82%{transform:none;opacity:1;}100%{transform:none;opacity:0;}}
+
+  section.block{padding:70px 0;border-top:1px solid var(--line);}
+  .center{text-align:center;max-width:640px;margin:0 auto 40px;}
+  .center h2{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;margin:10px 0 12px;}
+  .center p{color:var(--muted);font-size:1.08rem;margin:0;}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .step{padding:0;overflow:hidden;}
+  .step .vis{height:170px;display:grid;place-items:center;background:radial-gradient(80% 90% at 50% 100%, rgba(255,46,126,.22), transparent 70%), var(--surface-2);font-size:3.4rem;position:relative;}
+  .step .body{padding:20px;}
+  .step .tag{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.14em;color:var(--pink-2);background:var(--pink-soft);padding:4px 10px;border-radius:999px;margin-bottom:10px;}
+  .step h3{font-size:1.25rem;margin-bottom:6px;}
+  .step p{margin:0;color:var(--muted);}
+  .mini-qr{width:92px;height:92px;border-radius:12px;padding:0;background:#fff;box-shadow:0 0 0 8px #fff, 0 10px 30px rgba(0,0,0,.4);}
+  .mini-input{font-family:var(--font-display);font-weight:800;font-size:2.4rem;background:var(--bg-2);border:2px solid var(--pink);border-radius:14px;padding:6px 26px;box-shadow:0 0 0 6px var(--pink-soft);}
+  .mini-btn{background:var(--green);color:#06210f;font-weight:800;font-size:1.1rem;border-radius:14px;padding:14px 24px;font-family:var(--font-body);}
+
+  .compare{padding:26px;}
+  .compare .head{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:6px;}
+  .chip{display:inline-flex;align-items:center;gap:8px;font-weight:800;padding:9px 16px;border-radius:999px;justify-self:start;}
+  .chip.old{background:var(--red-soft);color:var(--red);}
+  .chip.new{background:var(--pink-soft);color:var(--pink-2);}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:16px 0;border-top:1px solid var(--line);}
+  .row:first-of-type{border-top:0;}
+  .row div{display:flex;gap:10px;align-items:flex-start;}
+  .row .ic{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:800;margin-top:1px;}
+  .row .bad{color:var(--muted);}
+  .row .bad .ic{background:var(--red-soft);color:var(--red);}
+  .row .good{font-weight:700;}
+  .row .good .ic{background:var(--green-soft);color:var(--green);}
+
+  .final{text-align:center;padding:70px 0 90px;border-top:1px solid var(--line);}
+  .final h2{font-size:clamp(1.8rem,4vw,2.5rem);margin-bottom:12px;}
+  .final p{color:var(--muted);margin:0 0 26px;}
+  footer{border-top:1px solid var(--line);padding:22px 0 30px;color:var(--muted);font-size:.85rem;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  footer a{color:var(--muted);}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr;padding-top:24px;}
+    .phone{transform:scale(.9);margin-top:-20px;}
+    .steps{grid-template-columns:1fr;}
+    .compare{padding:18px;}
+    .compare .head,.row{gap:12px;}
+  }
+  @media (max-width:520px){
+    .compare .head{display:none;}
+    .row{grid-template-columns:1fr;gap:8px;}
+  }
+  @media (prefers-reduced-motion: reduce){ .notif{animation:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span><span class="brand-name">Servora</span></a>
+    <a class="btn btn-ghost btn-small" href="/kitchen.html">Panou restaurant</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <span class="eyebrow">Pentru food court-uri și restaurante</span>
+      <h1>Telefonul sună.<br><em>Clientul ridică.</em></h1>
+      <p class="lead">Fiecare client e anunțat pe propriul telefon când comanda e gata — oriunde stă. Fără ecrane cu numere, fără pagere pierdute, fără strigat pe nume.</p>
+      <div class="ctas">
+        <a class="btn" href="/kitchen.html">Intră în panou</a>
+        <a class="btn btn-ghost" href="#cum-functioneaza">Cum funcționează</a>
+      </div>
+    </div>
+    <div class="phone" aria-hidden="true">
+      <div class="screen">
+        <div class="clock">12:42</div>
+        <div class="date">sâmbătă, 17 octombrie</div>
+        <div class="notif">
+          <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+          <div style="flex:1;">
+            <div class="t"><span>Servora</span><span>acum</span></div>
+            <div class="h">Comanda #42 e gata!</div>
+            <div class="s">Te așteaptă la Burger Bar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="block" id="cum-functioneaza">
+    <div class="center">
+      <span class="eyebrow">Cum funcționează</span>
+      <h2>Gata în două minute</h2>
+      <p>Zero instruire. Alertă pe orice telefon — fără aplicație, fără cont, doar o scanare.</p>
+    </div>
+    <div class="steps">
+      <div class="card step">
+        <div class="vis"><svg class="mini-qr" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-hidden="true"><rect width="21" height="21" fill="#fff"/><g fill="#140c16"><path d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z"/></g><g fill="#fff"><path d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z"/></g><g fill="#140c16"><path d="M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h2v2H9zM12 4h1v3h-1zM8 6h3v1H8zM0 8h2v1H0zM3 9h3v1H3zM7 8h2v3H7zM10 8h4v1h-4zM15 8h1v2h-1zM17 9h4v1h-4zM1 11h2v2H1zM4 11h2v1H4zM9 10h2v2H9zM12 10h2v3h-2zM16 11h3v1h-3zM20 11h1v3h-1zM8 13h3v1H8zM14 14h3v2h-3zM18 15h2v1h-2zM8 15h2v3H8zM11 16h2v1h-2zM15 17h1v4h-1zM17 18h4v1h-4zM10 19h4v1h-4zM8 20h1v1H8zM18 20h1v1h-1z"/></g></svg></div>
+        <div class="body"><span class="tag">PASUL 1</span><h3>Scanează codul QR</h3><p>Clientul îndreaptă camera spre cardul de pe tejghea. Fără aplicație, fără cont.</p></div>
+      </div>
+      <div class="card step">
+        <div class="vis"><div class="mini-input">42</div></div>
+        <div class="body"><span class="tag">PASUL 2</span><h3>Scrie numărul de pe bon</h3><p>Una-două cifre și gata. Apoi se așază liniștit unde vrea.</p></div>
+      </div>
+      <div class="card step">
+        <div class="vis"><div class="mini-btn">✓ Gata</div></div>
+        <div class="body"><span class="tag">PASUL 3</span><h3>Bucătăria apasă „Gata”</h3><p>O atingere pe orice telefon sau tabletă — și telefonul clientului sună și vibrează.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="center">
+      <span class="eyebrow">De ce Servora</span>
+      <h2>Mai simplu decât pagerele și ecranele</h2>
+    </div>
+    <div class="card compare">
+      <div class="head"><span class="chip old">✕ Sisteme vechi</span><span class="chip new">✓ Servora</span></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>Sute sau mii de lei pe ecrane și pagere</div><div class="good"><span class="ic">✓</span>Zero hardware. Cardul cu QR se printează gratuit.</div></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>Clienți îngrămădiți la tejghea, cu ochii pe ecran</div><div class="good"><span class="ic">✓</span>Clienții așteaptă oriunde — la masă, afară, la cumpărături.</div></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>Personal întrerupt la câteva secunde: „E gata a mea?”</div><div class="good"><span class="ic">✓</span>Echipa se ocupă de mâncare, nu de mulțime.</div></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>Pagere pierdute, furate sau cu bateria moartă</div><div class="good"><span class="ic">✓</span>Telefonul clientului. Nimic de pierdut, nimic de încărcat.</div></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>„Descarcă aplicația noastră”</div><div class="good"><span class="ic">✓</span>Fără aplicație — scanezi și gata.</div></div>
+      <div class="row"><div class="bad"><span class="ic">✕</span>Fiecare restaurant cu sistemul lui</div><div class="good"><span class="ic">✓</span>Comenzi de la mai multe restaurante, urmărite pe aceeași pagină.</div></div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Gata să renunți la strigat numere?</h2>
+    <p>Intră în panou cu contul primit și printează cardul cu QR.</p>
+    <a class="btn" href="/kitchen.html">Intră în panou</a>
+  </section>
+
+  <footer>
+    <span>© Servora</span>
+    <span><a href="/r">Comenzile mele</a> · <a href="/kitchen.html">Panou restaurant</a></span>
+  </footer>
+</div>
+</body>
+</html>

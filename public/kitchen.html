@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d090f">
+<title>Servora · Panou restaurant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/servora.css">
+<style>
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 16px 40px;}
+  .login{max-width:400px;margin:8vh auto 0;}
+  .login h1{font-size:1.5rem;margin:18px 0 6px;}
+  .login p.muted{margin:0 0 20px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .topbar .who{display:flex;align-items:center;gap:14px;}
+  .topbar .rname{font-family:var(--font-display);font-weight:800;font-size:1.2rem;}
+  .topbar .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:800;color:var(--green);}
+  .live.off{color:var(--red);}
+
+  .quick{display:flex;gap:10px;align-items:stretch;padding:16px;margin-bottom:18px;}
+  .quick label{font-weight:800;align-self:center;white-space:nowrap;}
+  .quick .input{font-family:var(--font-display);font-weight:800;font-size:1.6rem;text-align:center;letter-spacing:.05em;padding:10px;}
+  .quick .btn{white-space:nowrap;padding:0 22px;font-size:1.05rem;}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .col h2{font-size:1rem;display:flex;align-items:center;gap:8px;margin:0 2px 12px;}
+  .count{background:var(--surface-2);border-radius:999px;padding:2px 10px;font-size:.85rem;}
+  .empty{border:1.5px dashed var(--line-strong);border-radius:var(--radius);padding:26px 16px;text-align:center;color:var(--muted);font-size:.92rem;}
+
+  .ticket{display:flex;align-items:center;gap:14px;padding:14px 14px 14px 18px;margin-bottom:10px;}
+  .ticket .num{font-family:var(--font-display);font-weight:800;font-size:2.2rem;min-width:90px;line-height:1;}
+  .ticket .num small{color:var(--muted);font-size:1.1rem;}
+  .ticket .meta{flex:1;font-size:.85rem;color:var(--muted);}
+  .ticket .meta b{color:var(--text);}
+  .ticket .btns{display:flex;gap:8px;}
+  .ticket .btn-ready{padding:14px 18px;font-size:1rem;}
+  .ticket.ready{border-color:rgba(52,210,123,.4);}
+  .ticket.new{animation:pop .6s ease;}
+  @keyframes pop{0%{transform:scale(.96);border-color:var(--pink);}100%{transform:scale(1);}}
+
+  .help{margin-top:22px;font-size:.88rem;}
+  .help summary{cursor:pointer;font-weight:700;}
+  .help ol{padding-left:20px;color:var(--muted);}
+
+  .cols > .col{min-width:0;}
+  @media (max-width:760px){
+    .cols{grid-template-columns:minmax(0,1fr);}
+    .ticket{flex-wrap:wrap;}
+    .ticket .meta{flex:1 1 140px;}
+    .ticket .btns{width:100%;}
+    .ticket .btns .btn{flex:1;padding:12px;}
+    .quick{flex-wrap:wrap;}
+    .quick label{width:100%;}
+    .quick .input{flex:1;min-width:0;}
+    .quick .btn{padding:14px 18px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <section class="login" id="login-view" hidden>
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span><span class="brand-name">Servora</span></a>
+    <h1>Panou restaurant</h1>
+    <p class="muted">Intră cu contul primit de la Servora.</p>
+    <form class="card" id="login-form">
+      <label class="field"><span>Utilizator</span><input class="input" id="l-user" autocomplete="username" autocapitalize="none" required></label>
+      <label class="field"><span>Parolă</span><input class="input" id="l-pass" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-block" type="submit" id="l-btn">Intră în panou</button>
+      <p class="error" id="l-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- PANOU -->
+  <section id="panel-view" hidden>
+    <div class="topbar">
+      <div class="who">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+        <div>
+          <div class="rname" id="p-name">Restaurant</div>
+          <span class="live" id="live"><span class="dot"></span>Conectat</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost btn-small" id="p-print" target="_blank" rel="noopener">🖨️ Cardul cu QR</a>
+        <button class="btn btn-ghost btn-small" id="p-logout">Ieși din cont</button>
+      </div>
+    </div>
+
+    <form class="card quick" id="quick-form" autocomplete="off">
+      <label for="q-num">Comandă gata nr.</label>
+      <input class="input" id="q-num" inputmode="numeric" maxlength="10" placeholder="42">
+      <button class="btn btn-green" type="submit">✓ Gata</button>
+    </form>
+
+    <div class="cols">
+      <div class="col">
+        <h2>⏳ Așteaptă <span class="count" id="c-pending">0</span></h2>
+        <div id="list-pending"></div>
+      </div>
+      <div class="col">
+        <h2>✅ Gata de ridicare <span class="count" id="c-ready">0</span></h2>
+        <div id="list-ready"></div>
+      </div>
+    </div>
+
+    <details class="help card">
+      <summary>Cum se folosește?</summary>
+      <ol>
+        <li>Clientul scanează QR-ul de pe tejghea și scrie numărul de pe bon. Numărul apare aici, la „Așteaptă”.</li>
+        <li>Când comanda e gata, apasă <b>Gata</b> lângă număr. Telefonul clientului sună și vibrează.</li>
+        <li>Grabă mare? Scrie numărul sus și apasă <b>✓ Gata</b>. Merge chiar dacă clientul nu l-a introdus încă — va vedea că e gata imediat ce îl scrie.</li>
+        <li>Când clientul ridică mâncarea, apasă <b>Ridicată</b>. Ai apăsat greșit „Gata”? Apasă <b>Anulează</b>.</li>
+      </ol>
+    </details>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var TOKEN_KEY = 'servora_kitchen_token';
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function safeRemove(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  var toastTimer;
+  function toast(msg){ var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600); }
+
+  var token = safeGet(TOKEN_KEY);
+  var pollTimer = null;
+  var known = {};
+
+  function api(path, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+    if(token) opts.headers.Authorization = 'Bearer ' + token;
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(body){
+        if(r.status === 401 && path !== '/api/login'){ logout('Sesiunea a expirat. Intră din nou.'); }
+        if(!r.ok){ var e = new Error(body.error || 'eroare'); e.status = r.status; e.code = body.error; throw e; }
+        return body;
+      });
+    });
+  }
+
+  function showLogin(){ $('login-view').hidden = false; $('panel-view').hidden = true; }
+  function showPanel(){ $('login-view').hidden = true; $('panel-view').hidden = false; }
+
+  function logout(msg){
+    token = null; safeRemove(TOKEN_KEY); clearInterval(pollTimer);
+    showLogin();
+    if(msg){ var e = $('l-error'); e.textContent = msg; e.hidden = false; }
+  }
+  $('p-logout').addEventListener('click', function(){ logout(); });
+
+  $('login-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var err = $('l-error'); err.hidden = true;
+    $('l-btn').disabled = true;
+    api('/api/login', { method:'POST', body: JSON.stringify({ username: $('l-user').value, password: $('l-pass').value }) })
+      .then(function(d){ token = d.token; safeSet(TOKEN_KEY, token); $('l-pass').value = ''; startPanel(); })
+      .catch(function(e){
+        err.textContent = e.code === 'cont_inactiv' ? 'Contul este dezactivat.'
+          : e.status === 429 ? 'Prea multe încercări. Mai așteaptă câteva minute.'
+          : e.status === 401 ? 'Utilizator sau parolă greșită.' : 'Nu ne-am putut conecta. Încearcă din nou.';
+        err.hidden = false;
+      })
+      .then(function(){ $('l-btn').disabled = false; });
+  });
+
+  function minutesSince(t){
+    var m = Math.floor((Date.now() - t) / 60000);
+    return m < 1 ? 'acum' : ('acum ' + m + ' min');
+  }
+
+  function act(id, what, msg){
+    return api('/api/orders/'+encodeURIComponent(id)+'/'+what, { method:'POST' })
+      .then(function(o){ if(msg) toast(msg.replace('{n}', o.number)); refresh(); })
+      .catch(function(){ toast('Nu a mers. Verifică internetul.'); });
+  }
+
+  function ticket(o){
+    var el = document.createElement('div');
+    el.className = 'card ticket' + (o.status === 'ready' ? ' ready' : '') + (known[o.id] ? '' : ' new');
+    var phones = o.clientCount > 0
+      ? '📱 <b>' + o.clientCount + (o.clientCount === 1 ? ' telefon' : ' telefoane') + '</b> așteaptă'
+      : 'Niciun client nu a scris încă numărul';
+    var when = o.status === 'ready' ? ('Gata ' + minutesSince(o.readyAt)) : ('Scris ' + minutesSince(o.createdAt));
+    el.innerHTML =
+      '<div class="num"><small>#</small>' + esc(o.number) + '</div>' +
+      '<div class="meta">' + phones + '<br>' + when + '</div>' +
+      '<div class="btns"></div>';
+    var btns = el.querySelector('.btns');
+    if(o.status === 'pending'){
+      var b = document.createElement('button');
+      b.className = 'btn btn-green btn-ready'; b.textContent = '✓ Gata';
+      b.addEventListener('click', function(){ b.disabled = true; act(o.id, 'ready', 'Comanda #{n} e gata — clientul a fost anunțat.'); });
+      btns.appendChild(b);
+    } else {
+      var picked = document.createElement('button');
+      picked.className = 'btn btn-small'; picked.textContent = 'Ridicată';
+      picked.addEventListener('click', function(){ picked.disabled = true; act(o.id, 'done'); });
+      var undo = document.createElement('button');
+      undo.className = 'btn btn-ghost btn-small'; undo.textContent = 'Anulează';
+      undo.addEventListener('click', function(){ undo.disabled = true; act(o.id, 'pending', 'Comanda #{n} a revenit la „Așteaptă”.'); });
+      btns.appendChild(undo); btns.appendChild(picked);
+    }
+    return el;
+  }
+
+  function fill(boxId, countId, list, emptyText){
+    var box = $(boxId); box.innerHTML = '';
+    $(countId).textContent = list.length;
+    if(list.length === 0){ box.innerHTML = '<div class="empty">' + emptyText + '</div>'; return; }
+    list.forEach(function(o){ box.appendChild(ticket(o)); });
+  }
+
+  function setLive(ok){
+    var l = $('live');
+    l.className = 'live' + (ok ? '' : ' off');
+    l.innerHTML = '<span class="dot"></span>' + (ok ? 'Conectat' : 'Fără internet — reîncerc…');
+  }
+
+  function refresh(){
+    return api('/api/orders', {cache:'no-store'}).then(function(d){
+      setLive(true);
+      $('p-name').textContent = d.restaurant.name;
+      $('p-print').href = '/print.html?slug=' + encodeURIComponent(d.restaurant.slug);
+      var pending = d.orders.filter(function(o){ return o.status === 'pending'; });
+      var ready = d.orders.filter(function(o){ return o.status === 'ready'; });
+      fill('list-pending', 'c-pending', pending, 'Niciun client nu așteaptă acum.<br>Numerele scrise de clienți apar aici.');
+      fill('list-ready', 'c-ready', ready, 'Comenzile marcate „Gata” apar aici până sunt ridicate.');
+      var next = {}; d.orders.forEach(function(o){ next[o.id] = true; }); known = next;
+    }).catch(function(e){ if(e.status !== 401) setLive(false); });
+  }
+
+  $('quick-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var input = $('q-num');
+    var n = input.value.trim().toUpperCase().replace(/\s+/g, '');
+    if(!/^[A-Z0-9-]{1,10}$/.test(n)){ toast('Scrie numărul de pe bon.'); input.focus(); return; }
+    api('/api/orders/ready-by-number', { method:'POST', body: JSON.stringify({number: n}) })
+      .then(function(o){
+        input.value = '';
+        toast(o.clientCount > 0 ? ('Comanda #' + o.number + ' e gata — clientul a fost anunțat.') : ('Comanda #' + o.number + ' marcată gata. Clientul o va vedea când scrie numărul.'));
+        refresh();
+      })
+      .catch(function(){ toast('Nu a mers. Verifică internetul.'); });
+  });
+
+  function startPanel(){
+    showPanel();
+    refresh();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(refresh, 3000);
+  }
+
+  if(token) startPanel(); else showLogin();
+})();
+</script>
+</body>
+</html>

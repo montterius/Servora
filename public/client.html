@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d090f">
+<title>Servora · Comanda ta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/servora.css">
+<style>
+  .wrap{max-width:460px;margin:0 auto;padding:18px 16px 40px;}
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+
+  .hero{padding:26px 22px 22px;}
+  .hero .eyebrow{margin-bottom:8px;}
+  .hero h1{font-size:1.65rem;font-weight:800;margin-bottom:8px;}
+  .hero p.lead{color:var(--muted);margin:0 0 20px;font-size:.98rem;}
+
+  .num-input{
+    width:100%;text-align:center;font-family:var(--font-display);font-weight:800;
+    font-size:2.6rem;letter-spacing:.06em;padding:14px 10px;border-radius:16px;
+    background:var(--bg-2);color:var(--text);border:2px solid var(--line-strong);outline:none;
+  }
+  .num-input::placeholder{color:rgba(255,255,255,.18);font-size:.7em;}
+  .num-input:focus{border-color:var(--pink);box-shadow:0 0 0 5px var(--pink-soft);}
+  .letters-toggle{background:none;border:0;color:var(--muted);font-size:.85rem;text-decoration:underline;margin:10px auto 16px;display:block;}
+  .hero .btn{font-size:1.08rem;padding:17px;}
+
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 12px;}
+  #orders-section{margin-bottom:24px;}
+  .hero.compact{padding:20px;}
+  .hero.compact h1{font-size:1.2rem;margin-bottom:14px;}
+  .hero.compact .num-input{font-size:2rem;padding:10px;}
+  .section-title h2{font-size:1.05rem;}
+
+  .order{display:flex;align-items:center;gap:14px;padding:16px 16px 16px 18px;margin-bottom:10px;transition:border-color .3s, background .3s;}
+  .order.is-ready{border-color:rgba(52,210,123,.55);background:linear-gradient(180deg, rgba(52,210,123,.10), var(--surface));}
+  .order .num{font-family:var(--font-display);font-weight:800;font-size:2rem;min-width:84px;}
+  .order .num small{color:var(--muted);font-size:1.1rem;margin-right:1px;}
+  .order .meta{flex:1;min-width:0;}
+  .order .rest{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
+  .order .x{background:none;border:0;color:var(--muted);font-size:1.1rem;padding:6px;border-radius:8px;}
+  .order .x:hover{background:var(--line);}
+
+  .keep-open{display:flex;gap:12px;align-items:flex-start;padding:15px 16px;margin-top:14px;background:var(--pink-soft);border-color:rgba(255,46,126,.25);}
+  .keep-open .ic{font-size:1.3rem;line-height:1.2;}
+  .keep-open p{margin:0;font-size:.9rem;}
+  .keep-open strong{display:block;margin-bottom:2px;}
+
+  .sound-banner{position:sticky;top:10px;z-index:5;margin-bottom:14px;padding:13px 16px;background:var(--amber);color:#2a1700;font-weight:800;border-radius:14px;text-align:center;border:0;width:100%;}
+
+  .hint{font-size:.88rem;color:var(--muted);text-align:center;margin:18px 10px 0;}
+  .notfound h1{font-size:1.4rem;margin-bottom:8px;}
+
+  /* Ecranul mare "E GATA!" */
+  #ready-overlay{
+    position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px 22px calc(32px + env(safe-area-inset-bottom));text-align:center;
+    background:radial-gradient(90% 60% at 50% 30%, #ff5d9a, #ff2e7e 45%, #a80f4c);
+    animation:flash 1s ease-in-out infinite alternate;
+  }
+  @keyframes flash{to{filter:brightness(1.12);}}
+  #ready-overlay .bell{font-size:3.6rem;animation:ring 1s ease-in-out infinite;transform-origin:50% 10%;}
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(16deg);}40%{transform:rotate(-14deg);}60%{transform:rotate(8deg);}80%{transform:rotate(-6deg);}}
+  #ready-overlay .big{font-family:var(--font-display);font-weight:800;font-size:5.4rem;line-height:1;margin:14px 0 6px;letter-spacing:-.02em;}
+  #ready-overlay .lbl{font-family:var(--font-display);font-weight:800;font-size:1.7rem;}
+  #ready-overlay .where{font-size:1.1rem;opacity:.92;margin:10px 0 34px;}
+  #ready-overlay .btn{background:#fff;color:#a80f4c;font-size:1.1rem;padding:18px 26px;max-width:340px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+
+  @media (prefers-reduced-motion: reduce){
+    #ready-overlay,#ready-overlay .bell,.dot{animation:none!important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/" aria-label="Servora">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+      <span class="brand-name">Servora</span>
+    </a>
+  </header>
+
+  <button class="sound-banner" id="sound-banner" hidden>🔈 Atinge aici ca să pornești sunetul alertei</button>
+
+  <!-- Lista comenzilor urmarite (de la toate restaurantele) -->
+  <section id="orders-section" hidden>
+    <div class="section-title"><h2>Comenzile tale</h2><span class="muted" id="orders-count"></span></div>
+    <div id="orders"></div>
+
+    <div class="card keep-open">
+      <div class="ic">📱</div>
+      <p><strong>Ține pagina deschisă</strong><span id="keep-open-text">Când comanda e gata, telefonul sună și vibrează. Poți sta liniștit la masă.</span></p>
+    </div>
+    <p class="hint">Ai comandat și de la alt restaurant? Scanează și codul lui QR — comanda apare tot aici.</p>
+  </section>
+
+  <!-- Formularul: apare doar cand clientul a venit de la QR-ul unui restaurant -->
+  <section class="card hero" id="form-card" hidden>
+    <div class="eyebrow" id="rest-name">Se încarcă…</div>
+    <h1 id="form-title">Introdu numărul comenzii</h1>
+    <p class="lead" id="form-lead">Vă rugăm introduceți numărul de ordine pentru a fi anunțat pe telefon când comanda dumneavoastră este gata.</p>
+    <form id="order-form" autocomplete="off">
+      <input class="num-input" id="num" inputmode="numeric" maxlength="10" placeholder="ex. 42" aria-label="Numărul comenzii" enterkeyhint="done">
+      <button type="button" class="letters-toggle" id="letters-toggle">Numărul de pe bon conține și litere?</button>
+      <button class="btn btn-block" id="btn-submit" type="submit">🔔 Anunță-mă când e gata</button>
+      <p class="error" id="form-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- Restaurant inexistent / dezactivat -->
+  <section class="card notfound" id="notfound-card" hidden>
+    <h1>Restaurantul nu a fost găsit</h1>
+    <p class="muted">Codul QR scanat nu mai este activ. Te rugăm să întrebi la tejghea.</p>
+  </section>
+
+  <section class="card" id="empty-card" hidden>
+    <h1 style="font-size:1.3rem;margin-bottom:6px;">Nu urmărești nicio comandă</h1>
+    <p class="muted" style="margin:0;">Scanează codul QR de pe tejgheaua restaurantului ca să fii anunțat când comanda ta e gata.</p>
+  </section>
+</div>
+
+<div id="ready-overlay" hidden role="alertdialog" aria-live="assertive">
+  <div class="bell">🔔</div>
+  <div class="big" id="ro-number">#42</div>
+  <div class="lbl" id="ro-label">Comanda ta e gata!</div>
+  <div class="where" id="ro-where">Te așteaptă la tejghea.</div>
+  <button class="btn" id="ro-ack">Am văzut — vin acum</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  // ---------- Memoria telefonului (localStorage) ----------
+  // Tinem minte ce comenzi urmareste clientul, ca sa le vada si daca
+  // inchide/redeschide pagina sau scaneaza QR-ul altui restaurant.
+  var ORDERS_KEY = 'servora_orders';
+  var ACK_KEY = 'servora_acked';
+  function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function readList(k){ try{ var v = JSON.parse(safeGet(k) || '[]'); return Array.isArray(v) ? v : []; }catch(e){ return []; } }
+  function getIds(){ return readList(ORDERS_KEY); }
+  function setIds(ids){ safeSet(ORDERS_KEY, JSON.stringify(ids.slice(-12))); }
+  function isAcked(id){ return readList(ACK_KEY).indexOf(id) !== -1; }
+  function setAcked(id){ var a = readList(ACK_KEY); if(a.indexOf(id) === -1){ a.push(id); safeSet(ACK_KEY, JSON.stringify(a.slice(-40))); } }
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  var toastTimer;
+  function toast(msg){ var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3200); }
+
+  function api(path, opts){
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(body){
+        if(!r.ok){ var e = new Error(body.error || 'eroare'); e.status = r.status; e.code = body.error; throw e; }
+        return body;
+      });
+    });
+  }
+
+  // Din adresa /r/burger-bar aflam "slug"-ul restaurantului
+  var m = location.pathname.match(/^\/r\/([a-z0-9-]+)\/?$/);
+  var slug = m ? m[1] : null;
+  var restaurant = null;
+
+  // ---------- Sunet ----------
+  // Telefoanele (mai ales iPhone) nu lasa o pagina sa cante sunete pana
+  // cand omul nu atinge ecranul macar o data. De aceea "deblocam" sunetul
+  // la prima atingere (ex. cand apasa "Anunta-ma").
+  var audioCtx = null;
+  function unlockAudio(){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      g.gain.value = 0; o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.01);
+    }catch(e){}
+    setTimeout(updateSoundBanner, 150);
+  }
+  function soundReady(){ return audioCtx && audioCtx.state === 'running'; }
+  function updateSoundBanner(){
+    $('sound-banner').hidden = soundReady() || getIds().length === 0;
+  }
+  $('sound-banner').addEventListener('click', unlockAudio);
+  document.addEventListener('pointerdown', function(){ if(!soundReady()) unlockAudio(); }, {passive:true});
+
+  function chime(){
+    if(!audioCtx) return;
+    try{
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      var t0 = audioCtx.currentTime;
+      [[988,0],[1319,0.16],[1568,0.32]].forEach(function(p){
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = p[0];
+        g.gain.setValueAtTime(0.0001, t0+p[1]);
+        g.gain.exponentialRampToValueAtTime(0.5, t0+p[1]+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+p[1]+0.45);
+        o.connect(g).connect(audioCtx.destination); o.start(t0+p[1]); o.stop(t0+p[1]+0.5);
+      });
+    }catch(e){}
+  }
+
+  // ---------- Ecranul ramane aprins (Wake Lock) ----------
+  // Cerem telefonului sa nu stinga ecranul cat timp pagina e deschisa.
+  // Merge pe Android (Chrome) si pe iPhone cu iOS 16.4 sau mai nou.
+  var wakeLock = null;
+  function keepScreenOn(){
+    if(!('wakeLock' in navigator) || getIds().length === 0) return;
+    if(wakeLock && !wakeLock.released) return;
+    navigator.wakeLock.request('screen').then(function(l){ wakeLock = l; updateKeepOpenText(); }).catch(function(){ updateKeepOpenText(); });
+  }
+  function updateKeepOpenText(){
+    var on = wakeLock && !wakeLock.released;
+    $('keep-open-text').textContent = on
+      ? 'Ecranul rămâne aprins singur. Când comanda e gata, telefonul sună și vibrează — poți sta liniștit la masă.'
+      : 'Nu bloca telefonul și nu închide pagina. Când comanda e gata, telefonul sună și vibrează aici.';
+  }
+
+  // ---------- Notificari push (bonus, acolo unde telefonul le accepta) ----------
+  function b64ToUint8(b){ var p = '='.repeat((4 - b.length % 4) % 4); var s = atob((b+p).replace(/-/g,'+').replace(/_/g,'/')); var a = new Uint8Array(s.length); for(var i=0;i<s.length;i++) a[i] = s.charCodeAt(i); return a; }
+  var swReg = null;
+  function getPushSubscription(askPermission){
+    if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return Promise.resolve(null);
+    if(Notification.permission === 'denied') return Promise.resolve(null);
+    if(Notification.permission !== 'granted' && !askPermission) return Promise.resolve(null);
+    return navigator.serviceWorker.register('/sw.js').then(function(){ return navigator.serviceWorker.ready; }).then(function(reg){
+      swReg = reg;
+      var perm = Notification.permission === 'granted' ? Promise.resolve('granted') : Notification.requestPermission();
+      return perm.then(function(p){
+        if(p !== 'granted') return null;
+        return fetch('/api/vapid-public-key').then(function(r){ return r.json(); }).then(function(d){
+          if(!d.publicKey) return null;
+          return reg.pushManager.getSubscription().then(function(existing){
+            return existing || reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:b64ToUint8(d.publicKey) });
+          });
+        });
+      });
+    }).catch(function(){ return null; });
+  }
+  function subscribeOrder(id, askPermission){
+    getPushSubscription(askPermission).then(function(sub){
+      if(!sub) return;
+      fetch('/api/orders/'+encodeURIComponent(id)+'/subscribe', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subscription: sub.toJSON()})
+      }).catch(function(){});
+    });
+  }
+
+  // ---------- Formularul ----------
+  var numInput = $('num');
+  $('letters-toggle').addEventListener('click', function(){
+    numInput.setAttribute('inputmode', 'text');
+    numInput.setAttribute('autocapitalize', 'characters');
+    this.hidden = true;
+    numInput.blur(); setTimeout(function(){ numInput.focus(); }, 60);
+  });
+
+  $('order-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    unlockAudio(); // atingerea butonului deblocheaza sunetul
+    var raw = numInput.value.trim().toUpperCase().replace(/\s+/g, '');
+    var err = $('form-error');
+    err.hidden = true;
+    if(!/^[A-Z0-9-]{1,10}$/.test(raw)){
+      err.textContent = 'Scrie numărul exact cum apare pe bon (doar cifre și litere).';
+      err.hidden = false; numInput.focus(); return;
+    }
+    var btn = $('btn-submit');
+    btn.disabled = true;
+    api('/api/r/'+slug+'/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({number: raw}) })
+      .then(function(o){
+        var ids = getIds();
+        if(ids.indexOf(o.id) === -1){ ids.push(o.id); setIds(ids); }
+        orderData[o.id] = o;
+        numInput.value = '';
+        numInput.blur();
+        render();
+        keepScreenOn();
+        subscribeOrder(o.id, true);
+        if(o.status === 'ready'){ checkForReady(); }
+        else toast('Gata! Te anunțăm când comanda #'+o.number+' e gata.');
+      })
+      .catch(function(e){
+        err.textContent = e.status === 404 ? 'Restaurantul nu mai este activ.'
+          : e.status === 429 ? 'Prea multe încercări. Mai încearcă peste câteva minute.'
+          : e.status === 400 ? 'Numărul nu este valid. Verifică bonul.'
+          : 'Nu am putut trimite. Verifică internetul și încearcă din nou.';
+        err.hidden = false;
+      })
+      .then(function(){ btn.disabled = false; });
+  });
+
+  // ---------- Lista de comenzi ----------
+  var orderData = {};
+  var prevStatus = {};
+  var doneSeen = {};
+
+  function statusPill(s){
+    if(s === 'ready') return '<span class="pill pill-ready"><span class="dot"></span>Gata de ridicare</span>';
+    if(s === 'done') return '<span class="pill pill-done">Ridicată ✓</span>';
+    return '<span class="pill pill-pending"><span class="dot"></span>În pregătire</span>';
+  }
+
+  function removeId(id){
+    setIds(getIds().filter(function(x){ return x !== id; }));
+    delete orderData[id]; delete prevStatus[id];
+    render();
+  }
+
+  function render(){
+    var ids = getIds();
+    $('form-card').hidden = !restaurant;
+    $('orders-section').hidden = ids.length === 0;
+    $('empty-card').hidden = !(ids.length === 0 && !slug);
+    $('form-title').textContent = ids.length ? 'Ai încă o comandă aici?' : 'Introdu numărul comenzii';
+    $('form-lead').hidden = ids.length > 0;
+    $('form-card').classList.toggle('compact', ids.length > 0);
+    $('orders-count').textContent = ids.length > 1 ? ids.length + ' comenzi' : '';
+    updateSoundBanner();
+    updateKeepOpenText();
+
+    var box = $('orders');
+    box.innerHTML = '';
+    ids.slice().reverse().forEach(function(id){
+      var o = orderData[id];
+      var el = document.createElement('div');
+      el.className = 'card order' + (o && o.status === 'ready' ? ' is-ready' : '');
+      el.innerHTML =
+        '<div class="num"><small>#</small>' + esc(o ? o.number : '···') + '</div>' +
+        '<div class="meta"><div class="rest">' + esc(o && o.restaurantName ? o.restaurantName : 'Se încarcă…') + '</div>' + statusPill(o ? o.status : 'pending') + '</div>' +
+        '<button class="x" aria-label="Elimină comanda din listă" title="Elimină">✕</button>';
+      el.querySelector('.x').addEventListener('click', function(){ removeId(id); });
+      box.appendChild(el);
+    });
+  }
+
+  // ---------- Alerta "E GATA" ----------
+  var alerting = null, alertTimer = null, alertStarted = 0;
+  function startAlert(o){
+    alerting = o;
+    $('ro-number').textContent = '#' + o.number;
+    $('ro-label').textContent = 'Comanda ta e gata!';
+    $('ro-where').textContent = o.restaurantName ? ('Te așteaptă la ' + o.restaurantName + '.') : 'Te așteaptă la tejghea.';
+    $('ready-overlay').hidden = false;
+    alertStarted = Date.now();
+    var ring = function(){
+      chime();
+      if(navigator.vibrate) navigator.vibrate([400,150,400,150,700]);
+      // dupa 2 minute ne oprim singuri, ca sa nu sune la infinit
+      if(Date.now() - alertStarted > 120000) stopAlert(true);
+    };
+    ring();
+    clearInterval(alertTimer);
+    alertTimer = setInterval(ring, 2600);
+    flashTitle();
+  }
+  function stopAlert(ack){
+    clearInterval(alertTimer); alertTimer = null;
+    if(navigator.vibrate) navigator.vibrate(0);
+    if(alerting && ack !== false) setAcked(alerting.id);
+    $('ready-overlay').hidden = true;
+    alerting = null;
+    document.title = originalTitle;
+    checkForReady(); // poate mai e o alta comanda gata
+  }
+  $('ro-ack').addEventListener('click', function(){ stopAlert(true); });
+
+  var originalTitle = document.title, titleTimer = null;
+  function flashTitle(){
+    clearInterval(titleTimer);
+    titleTimer = setInterval(function(){
+      if(!alerting){ clearInterval(titleTimer); document.title = originalTitle; return; }
+      document.title = document.title === originalTitle ? '🔔 E GATA! #' + alerting.number : originalTitle;
+    }, 900);
+  }
+
+  function checkForReady(){
+    if(alerting) return;
+    var ids = getIds();
+    for(var i = 0; i < ids.length; i++){
+      var o = orderData[ids[i]];
+      if(o && o.status === 'ready' && !isAcked(o.id)){ startAlert(o); return; }
+    }
+  }
+
+  // ---------- Intrebam serverul din 3 in 3 secunde ----------
+  function poll(){
+    var ids = getIds();
+    if(ids.length === 0) return;
+    Promise.all(ids.map(function(id){
+      return api('/api/orders/'+encodeURIComponent(id), {cache:'no-store'}).then(function(o){
+        orderData[id] = o;
+        // comanda ridicata: o scoatem singuri din lista dupa ~1 minut
+        if(o.status === 'done'){
+          doneSeen[id] = doneSeen[id] || Date.now();
+          if(Date.now() - doneSeen[id] > 60000){ delete doneSeen[id]; removeId(id); return; }
+        }
+        if(o.status !== 'ready' && isAcked(id) && prevStatus[id] === 'ready'){
+          // bucataria a anulat "gata" - daca o marcheaza din nou, sunam din nou
+          setAckedOff(id);
+        }
+        prevStatus[id] = o.status;
+      }).catch(function(e){
+        if(e.status === 404){ removeId(id); }
+      });
+    })).then(function(){
+      // daca bucataria a marcat-o "ridicata" sau a anulat "gata", oprim alerta
+      if(alerting){ var cur = orderData[alerting.id]; if(!cur || cur.status !== 'ready') stopAlert(false); }
+      render(); checkForReady();
+    });
+  }
+  function setAckedOff(id){ safeSet(ACK_KEY, JSON.stringify(readList(ACK_KEY).filter(function(x){ return x !== id; }))); }
+
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible'){ poll(); keepScreenOn(); }
+  });
+
+  // ---------- Pornire ----------
+  function start(){
+    render();
+    poll();
+    setInterval(poll, 3000);
+    keepScreenOn();
+    // daca permisiunea de notificari e deja data, abonam comenzile existente
+    getIds().forEach(function(id){ subscribeOrder(id, false); });
+  }
+
+  if(slug){
+    api('/api/r/'+slug).then(function(r){
+      restaurant = r;
+      $('rest-name').textContent = r.name;
+      document.title = originalTitle = r.name + ' · Servora';
+    }).catch(function(e){
+      if(e.status === 404) $('notfound-card').hidden = false;
+    }).then(function(){
+      start();
+      if(restaurant && getIds().length === 0) setTimeout(function(){ numInput.focus(); }, 300);
+    });
+  } else {
+    start();
+  }
+})();
+</script>
+</body>
+</html>
