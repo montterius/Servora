@@ -300,9 +300,12 @@ app.get('/api/r/:slug', async (req, res) => {
   }
 });
 
-// Clientul isi scrie numarul de pe bon. Daca exista deja o comanda activa
-// cu acel numar la acel restaurant (ex. alt prieten de la masa a scris-o,
-// sau bucataria a marcat-o deja gata), il "legam" de ea. Altfel cream una noua.
+// Clientul isi scrie numarul de pe bon. REGULA: un numar activ poate fi
+// urmarit de UN SINGUR telefon. Daca alt telefon l-a scris deja (ex. cineva
+// a gresit si a scris numarul altui client), refuzam - ca sa nu fie chemate
+// doua persoane pentru aceeasi comanda.
+// Exceptie: daca bucataria a marcat numarul "gata" inainte ca vreun client
+// sa-l scrie, primul client care il scrie il "preia".
 app.post('/api/r/:slug/orders', rateLimit(120, 10 * 60 * 1000), async (req, res) => {
   try {
     const restaurant = await findActiveRestaurantBySlug(req.params.slug);
@@ -312,12 +315,19 @@ app.post('/api/r/:slug/orders', rateLimit(120, 10 * 60 * 1000), async (req, res)
     if (!number) return res.status(400).json({ error: 'numar_invalid' });
 
     const restaurantId = restaurant._id.toString();
-    const existing = await ordersCollection.findOneAndUpdate(
-      { restaurantId, number, status: { $in: ['pending', 'ready'] } },
-      { $inc: { clientCount: 1 } },
+    const active = { restaurantId, number, status: { $in: ['pending', 'ready'] } };
+
+    // 1) comanda creata de bucatarie, pe care inca nu o urmareste nimeni -> o preia acest client
+    const claimed = await ordersCollection.findOneAndUpdate(
+      { ...active, clientCount: { $lt: 1 } },
+      { $set: { clientCount: 1 } },
       { returnDocument: 'after', sort: { createdAt: -1 } }
     );
-    if (existing) return res.json(publicOrder(existing, restaurant));
+    if (claimed) return res.json(publicOrder(claimed, restaurant));
+
+    // 2) numarul e deja urmarit de alt telefon -> refuzam
+    const taken = await ordersCollection.findOne(active);
+    if (taken) return res.status(409).json({ error: 'numar_ocupat' });
 
     const order = {
       _id: crypto.randomUUID(),

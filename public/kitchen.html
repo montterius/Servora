@@ -115,6 +115,8 @@
       <ol>
         <li>Clientul scanează QR-ul de pe tejghea și scrie numărul de pe bon. Numărul apare aici, la „Așteaptă”.</li>
         <li>Când comanda e gata, apasă <b>Gata</b> lângă număr. Telefonul clientului sună și vibrează.</li>
+        <li>Fiecare număr poate fi urmărit de un singur telefon. Dacă cineva scrie un număr deja introdus, i se cere să verifice bonul.</li>
+        <li>La ridicare, cereți clientului bonul fiscal și verificați numărul.</li>
         <li>Grabă mare? Scrie numărul sus și apasă <b>✓ Gata</b>. Merge chiar dacă clientul nu l-a introdus încă — va vedea că e gata imediat ce îl scrie.</li>
         <li>Când clientul ridică mâncarea, apasă <b>Ridicată</b>. Ai apăsat greșit „Gata”? Apasă <b>Anulează</b>.</li>
       </ol>
@@ -191,8 +193,8 @@
     var el = document.createElement('div');
     el.className = 'card ticket' + (o.status === 'ready' ? ' ready' : '') + (known[o.id] ? '' : ' new');
     var phones = o.clientCount > 0
-      ? '📱 <b>' + o.clientCount + (o.clientCount === 1 ? ' telefon' : ' telefoane') + '</b> așteaptă'
-      : 'Niciun client nu a scris încă numărul';
+      ? '📱 <b>Client pe telefon</b>'
+      : 'Fără client încă';
     var when = o.status === 'ready' ? ('Gata ' + minutesSince(o.readyAt)) : ('Scris ' + minutesSince(o.createdAt));
     el.innerHTML =
       '<div class="num"><small>#</small>' + esc(o.number) + '</div>' +

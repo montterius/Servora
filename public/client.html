@@ -51,6 +51,9 @@
 
   .sound-banner{position:sticky;top:10px;z-index:5;margin-bottom:14px;padding:13px 16px;background:var(--amber);color:#2a1700;font-weight:800;border-radius:14px;text-align:center;border:0;width:100%;}
 
+  .receipt-note{display:flex;gap:10px;align-items:center;margin-top:16px;padding:12px 14px;border-radius:12px;background:rgba(255,181,71,.10);border:1px solid rgba(255,181,71,.28);color:#ffd9a0;font-weight:700;font-size:.92rem;line-height:1.35;}
+  .receipt-note .ic{font-size:1.25rem;}
+  #ready-overlay .receipt{font-weight:800;background:rgba(0,0,0,.18);padding:10px 16px;border-radius:12px;margin:-18px 0 26px;}
   .hint{font-size:.88rem;color:var(--muted);text-align:center;margin:18px 10px 0;}
   .notfound h1{font-size:1.4rem;margin-bottom:8px;}
 
@@ -108,6 +111,7 @@
       <button class="btn btn-block" id="btn-submit" type="submit">🔔 Anunță-mă când e gata</button>
       <p class="error" id="form-error" hidden></p>
     </form>
+    <div class="receipt-note"><span class="ic">🧾</span><span>Vă rugăm păstrați bonul fiscal pentru confirmarea comenzii.</span></div>
   </section>
 
   <!-- Restaurant inexistent / dezactivat -->
@@ -127,6 +131,7 @@
   <div class="big" id="ro-number">#42</div>
   <div class="lbl" id="ro-label">Comanda ta e gata!</div>
   <div class="where" id="ro-where">Te așteaptă la tejghea.</div>
+  <div class="receipt">🧾 Prezentați bonul fiscal la ridicare</div>
   <button class="btn" id="ro-ack">Am văzut — vin acum</button>
 </div>
 
@@ -268,6 +273,11 @@
       err.textContent = 'Scrie numărul exact cum apare pe bon (doar cifre și litere).';
       err.hidden = false; numInput.focus(); return;
     }
+    // acest telefon urmareste deja numarul? nu il mai trimitem o data
+    var mine = getIds().map(function(id){ return orderData[id]; }).filter(function(o){
+      return o && o.restaurantSlug === slug && o.number === raw && o.status !== 'done';
+    })[0];
+    if(mine){ numInput.value = ''; toast('Urmărești deja comanda #' + raw + '.'); return; }
     var btn = $('btn-submit');
     btn.disabled = true;
     api('/api/r/'+slug+'/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({number: raw}) })
@@ -284,7 +294,8 @@
         else toast('Gata! Te anunțăm când comanda #'+o.number+' e gata.');
       })
       .catch(function(e){
-        err.textContent = e.status === 404 ? 'Restaurantul nu mai este activ.'
+        err.textContent = e.status === 409 ? ('Numărul ' + raw + ' a fost deja introdus de alt telefon. Verificați numărul de pe bon. Dacă este corect, vă rugăm să vă adresați personalului.')
+          : e.status === 404 ? 'Restaurantul nu mai este activ.'
           : e.status === 429 ? 'Prea multe încercări. Mai încearcă peste câteva minute.'
           : e.status === 400 ? 'Numărul nu este valid. Verifică bonul.'
           : 'Nu am putut trimite. Verifică internetul și încearcă din nou.';
