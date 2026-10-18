@@ -471,6 +471,42 @@ app.post('/api/orders/ready-by-number', requireRestaurant, async (req, res) => {
   }
 });
 
+// DEBLOCARE (doar pentru confuzii): un client spune ca numarul lui apare
+// "deja introdus de alt telefon". Personalul verifica bonul si elibereaza
+// numarul. Telefonul care l-a scris gresit nu mai e anuntat (comanda lui
+// dispare), iar numarul ramane in aceeasi stare (in asteptare / gata), liber
+// pentru clientul adevarat, care il poate scrie din nou.
+app.post('/api/orders/release-by-number', requireRestaurant, async (req, res) => {
+  try {
+    const number = normalizeNumber(req.body && req.body.number);
+    if (!number) return res.status(400).json({ error: 'numar_invalid' });
+    const restaurantId = req.restaurant._id.toString();
+    const old = await ordersCollection.findOne(
+      { restaurantId, number, status: { $in: ['pending', 'ready'] }, clientCount: { $gte: 1 } },
+      { sort: { createdAt: -1 } }
+    );
+    if (!old) return res.status(404).json({ error: 'nu_e_blocat' });
+
+    // o "comanda noua" cu acelasi numar si aceeasi stare, dar fara telefon legat
+    const fresh = {
+      _id: crypto.randomUUID(),
+      restaurantId,
+      number,
+      status: old.status,
+      createdAt: old.createdAt,
+      readyAt: old.readyAt || null,
+      clientCount: 0,
+      subscriptions: [],
+    };
+    await ordersCollection.deleteMany({ _id: old._id });
+    await ordersCollection.insertOne(fresh);
+    res.json(publicOrder(fresh));
+  } catch (err) {
+    console.error('Eroare la eliberarea numarului:', err);
+    res.status(500).json({ error: 'eroare_server' });
+  }
+});
+
 app.post('/api/orders/:id/ready', requireRestaurant, async (req, res) => {
   try {
     const order = await ordersCollection.findOne({ _id: req.params.id, restaurantId: req.restaurant._id.toString() });

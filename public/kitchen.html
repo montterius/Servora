@@ -43,7 +43,15 @@
   .ticket.new{animation:pop .6s ease;}
   @keyframes pop{0%{transform:scale(.96);border-color:var(--pink);}100%{transform:scale(1);}}
 
-  .help{margin-top:22px;font-size:.88rem;}
+  .release-wrap{margin-top:22px;}
+  .release-toggle{background:none;border:0;color:var(--muted);font-size:.86rem;text-decoration:underline;padding:4px 2px;}
+  .release-toggle:hover{color:var(--text);}
+  .release{margin-top:10px;border-color:rgba(255,181,71,.3);}
+  .release p{margin:0 0 12px;font-size:.9rem;color:var(--muted);}
+  .release p b{color:var(--amber);}
+  .release-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .release-row .input{flex:1;min-width:140px;font-family:var(--font-display);font-weight:800;font-size:1.2rem;text-align:center;}
+  .help{margin-top:14px;font-size:.88rem;}
   .help summary{cursor:pointer;font-weight:700;}
   .help ol{padding-left:20px;color:var(--muted);}
 
@@ -110,12 +118,25 @@
       </div>
     </div>
 
+    <div class="release-wrap">
+      <button type="button" class="release-toggle" id="release-toggle">🔓 Un client spune că numărul lui apare „deja introdus”?</button>
+      <form class="card release" id="release-form" autocomplete="off" hidden>
+        <p><b>Doar pentru confuzii.</b> Verificați întâi bonul fiscal al clientului. Telefonul care a scris numărul greșit nu mai este anunțat, iar clientul adevărat îl poate scrie din nou.</p>
+        <div class="release-row">
+          <input class="input" id="r-num" inputmode="numeric" maxlength="10" placeholder="nr. de pe bon">
+          <button class="btn btn-ghost" type="submit">Eliberează numărul</button>
+          <button class="btn btn-ghost btn-small" type="button" id="release-cancel">Renunță</button>
+        </div>
+      </form>
+    </div>
+
     <details class="help card">
       <summary>Cum se folosește?</summary>
       <ol>
         <li>Clientul scanează QR-ul de pe tejghea și scrie numărul de pe bon. Numărul apare aici, la „Așteaptă”.</li>
         <li>Când comanda e gata, apasă <b>Gata</b> lângă număr. Telefonul clientului sună și vibrează.</li>
         <li>Fiecare număr poate fi urmărit de un singur telefon. Dacă cineva scrie un număr deja introdus, i se cere să verifice bonul.</li>
+        <li>Doar dacă apare o confuzie (clientul are bonul, dar numărul lui apare „deja introdus”): folosiți linkul <b>🔓 „deja introdus”?</b> de sub liste și eliberați numărul.</li>
         <li>La ridicare, cereți clientului bonul fiscal și verificați numărul.</li>
         <li>Grabă mare? Scrie numărul sus și apasă <b>✓ Gata</b>. Merge chiar dacă clientul nu l-a introdus încă — va vedea că e gata imediat ce îl scrie.</li>
         <li>Când clientul ridică mâncarea, apasă <b>Ridicată</b>. Ai apăsat greșit „Gata”? Apasă <b>Anulează</b>.</li>
@@ -243,6 +264,19 @@
       var next = {}; d.orders.forEach(function(o){ next[o.id] = true; }); known = next;
     }).catch(function(e){ if(e.status !== 401) setLive(false); });
   }
+
+  // Deblocare numar (doar la confuzii) - ascunsa implicit, nu face parte din fluxul normal
+  function closeRelease(){ $('release-form').hidden = true; $('release-toggle').hidden = false; $('r-num').value = ''; }
+  $('release-toggle').addEventListener('click', function(){ this.hidden = true; $('release-form').hidden = false; $('r-num').focus(); });
+  $('release-cancel').addEventListener('click', closeRelease);
+  $('release-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var n = $('r-num').value.trim().toUpperCase().replace(/\s+/g, '');
+    if(!/^[A-Z0-9-]{1,10}$/.test(n)){ toast('Scrie numărul de pe bon.'); return; }
+    api('/api/orders/release-by-number', { method:'POST', body: JSON.stringify({number: n}) })
+      .then(function(o){ closeRelease(); toast('Numărul #' + o.number + ' a fost eliberat. Clientul îl poate scrie din nou.'); refresh(); })
+      .catch(function(e){ toast(e.code === 'nu_e_blocat' ? ('Numărul #' + n + ' nu este introdus de niciun telefon — clientul îl poate scrie direct.') : 'Nu a mers. Verifică internetul.'); });
+  });
 
   $('quick-form').addEventListener('submit', function(ev){
     ev.preventDefault();

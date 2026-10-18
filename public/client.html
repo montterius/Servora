@@ -415,7 +415,11 @@
         }
         prevStatus[id] = o.status;
       }).catch(function(e){
-        if(e.status === 404){ removeId(id); }
+        if(e.status === 404){
+          var gone = orderData[id];
+          removeId(id);
+          if(gone && gone.number) toast('Comanda #' + gone.number + ' a fost scoasă din listă de personal.');
+        }
       });
     })).then(function(){
       // daca bucataria a marcat-o "ridicata" sau a anulat "gata", oprim alerta
