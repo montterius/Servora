@@ -54,6 +54,9 @@
   .receipt-note{display:flex;gap:10px;align-items:center;margin-top:16px;padding:12px 14px;border-radius:12px;background:rgba(255,181,71,.10);border:1px solid rgba(255,181,71,.28);color:#ffd9a0;font-weight:700;font-size:.92rem;line-height:1.35;}
   .receipt-note .ic{font-size:1.25rem;}
   #ready-overlay .receipt{font-weight:800;background:rgba(0,0,0,.18);padding:10px 16px;border-radius:12px;margin:-18px 0 26px;}
+  .rejected-card{margin-bottom:16px;border-color:rgba(255,90,95,.5);background:linear-gradient(180deg, rgba(255,90,95,.14), var(--surface));}
+  .rejected-card .rj-title{font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:#ffb3b5;margin-bottom:6px;}
+  .rejected-card p{margin:0 0 12px;font-size:.93rem;}
   .hint{font-size:.88rem;color:var(--muted);text-align:center;margin:18px 10px 0;}
   .notfound h1{font-size:1.4rem;margin-bottom:8px;}
 
@@ -87,6 +90,12 @@
   </header>
 
   <button class="sound-banner" id="sound-banner" hidden>🔈 Atinge aici ca să pornești sunetul alertei</button>
+
+  <section class="card rejected-card" id="rejected-card" hidden role="alert">
+    <div class="rj-title">⚠️ Numărul <span id="rj-num"></span> nu corespunde bonului dumneavoastră</div>
+    <p id="rj-text">Personalul a verificat bonul fiscal, iar acest număr aparține altui client. Comanda a fost scoasă din listă. Vă rugăm verificați încă o dată numărul de pe bon înainte de a-l introduce.</p>
+    <button class="btn btn-ghost btn-small" id="rj-ok" type="button">Am înțeles</button>
+  </section>
 
   <!-- Lista comenzilor urmarite (de la toate restaurantele) -->
   <section id="orders-section" hidden>
@@ -143,6 +152,8 @@
   // Tinem minte ce comenzi urmareste clientul, ca sa le vada si daca
   // inchide/redeschide pagina sau scaneaza QR-ul altui restaurant.
   var ORDERS_KEY = 'servora_orders';
+  var DEVICE_KEY = 'servora_device';
+  var REJECTED_KEY = 'servora_rejected';
   var ACK_KEY = 'servora_acked';
   function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -274,13 +285,17 @@
       err.hidden = false; numInput.focus(); return;
     }
     // acest telefon urmareste deja numarul? nu il mai trimitem o data
+    if(isRejected(slug, raw)){
+      err.textContent = 'Numărul ' + raw + ' a fost verificat de personal și nu corespunde bonului dumneavoastră. Vă rugăm verificați încă o dată numărul de pe bon.';
+      err.hidden = false; numInput.focus(); return;
+    }
     var mine = getIds().map(function(id){ return orderData[id]; }).filter(function(o){
       return o && o.restaurantSlug === slug && o.number === raw && o.status !== 'done';
     })[0];
     if(mine){ numInput.value = ''; toast('Urmărești deja comanda #' + raw + '.'); return; }
     var btn = $('btn-submit');
     btn.disabled = true;
-    api('/api/r/'+slug+'/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({number: raw}) })
+    api('/api/r/'+slug+'/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({number: raw, deviceId: getDeviceId()}) })
       .then(function(o){
         var ids = getIds();
         if(ids.indexOf(o.id) === -1){ ids.push(o.id); setIds(ids); }
@@ -294,7 +309,9 @@
         else toast('Gata! Te anunțăm când comanda #'+o.number+' e gata.');
       })
       .catch(function(e){
-        err.textContent = e.status === 409 ? ('Numărul ' + raw + ' a fost deja introdus de alt telefon. Verificați numărul de pe bon. Dacă este corect, vă rugăm să vă adresați personalului.')
+        if(e.code === 'numar_respins') addRejected(slug, raw);
+        err.textContent = e.code === 'numar_respins' ? ('Numărul ' + raw + ' a fost verificat de personal și nu corespunde bonului dumneavoastră. Vă rugăm verificați încă o dată numărul de pe bon.')
+          : e.status === 409 ? ('Numărul ' + raw + ' a fost deja introdus de alt telefon. Verificați numărul de pe bon. Dacă este corect, vă rugăm să vă adresați personalului.')
           : e.status === 404 ? 'Restaurantul nu mai este activ.'
           : e.status === 429 ? 'Prea multe încercări. Mai încearcă peste câteva minute.'
           : e.status === 400 ? 'Numărul nu este valid. Verifică bonul.'
@@ -314,6 +331,27 @@
     if(s === 'done') return '<span class="pill pill-done">Ridicată ✓</span>';
     return '<span class="pill pill-pending"><span class="dot"></span>În pregătire</span>';
   }
+
+  // un cod la intamplare care identifica acest telefon (nu contine date personale)
+  function getDeviceId(){
+    var d = safeGet(DEVICE_KEY);
+    if(!d || !/^[A-Za-z0-9-]{8,64}$/.test(d)){
+      d = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+      safeSet(DEVICE_KEY, d);
+    }
+    return d;
+  }
+  function rejectedKey(s, n){ return s + '|' + n; }
+  function isRejected(s, n){ return readList(REJECTED_KEY).indexOf(rejectedKey(s, n)) !== -1; }
+  function addRejected(s, n){ var l = readList(REJECTED_KEY); var k = rejectedKey(s, n); if(l.indexOf(k) === -1){ l.push(k); safeSet(REJECTED_KEY, JSON.stringify(l.slice(-30))); } }
+  function showRejected(n, restName){
+    $('rj-num').textContent = '#' + n + (restName ? ' (' + restName + ')' : '');
+    $('rejected-card').hidden = false;
+    try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  }
+  $('rj-ok').addEventListener('click', function(){ $('rejected-card').hidden = true; });
 
   function removeId(id){
     setIds(getIds().filter(function(x){ return x !== id; }));
@@ -403,6 +441,12 @@
     if(ids.length === 0) return;
     Promise.all(ids.map(function(id){
       return api('/api/orders/'+encodeURIComponent(id), {cache:'no-store'}).then(function(o){
+        if(o.status === 'released'){
+          removeId(id);
+          if(o.restaurantSlug) addRejected(o.restaurantSlug, o.number);
+          showRejected(o.number, o.restaurantName);
+          return;
+        }
         orderData[id] = o;
         // comanda ridicata: o scoatem singuri din lista dupa ~1 minut
         if(o.status === 'done'){

@@ -314,20 +314,34 @@ app.post('/api/r/:slug/orders', rateLimit(120, 10 * 60 * 1000), async (req, res)
     const number = normalizeNumber(req.body && req.body.number);
     if (!number) return res.status(400).json({ error: 'numar_invalid' });
 
+    // "deviceId" = un cod la intamplare pe care telefonul il tine minte. Asa
+    // recunoastem telefonul care a scris gresit un numar, dupa ce personalul l-a eliberat.
+    const rawDevice = req.body && req.body.deviceId;
+    const deviceId = (typeof rawDevice === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(rawDevice)) ? rawDevice : null;
+
     const restaurantId = restaurant._id.toString();
     const active = { restaurantId, number, status: { $in: ['pending', 'ready'] } };
+    const current = await ordersCollection.findOne(active, { sort: { createdAt: -1 } });
 
-    // 1) comanda creata de bucatarie, pe care inca nu o urmareste nimeni -> o preia acest client
-    const claimed = await ordersCollection.findOneAndUpdate(
-      { ...active, clientCount: { $lt: 1 } },
-      { $set: { clientCount: 1 } },
-      { returnDocument: 'after', sort: { createdAt: -1 } }
-    );
-    if (claimed) return res.json(publicOrder(claimed, restaurant));
-
-    // 2) numarul e deja urmarit de alt telefon -> refuzam
-    const taken = await ordersCollection.findOne(active);
-    if (taken) return res.status(409).json({ error: 'numar_ocupat' });
+    if (current) {
+      // telefonul acesta a scris deja gresit numarul, iar personalul l-a eliberat -> refuzam
+      if (deviceId && (current.blockedDevices || []).includes(deviceId)) {
+        return res.status(409).json({ error: 'numar_respins' });
+      }
+      if ((current.clientCount || 0) >= 1) {
+        // acelasi telefon care il urmareste deja -> ii dam comanda lui inapoi
+        if (deviceId && current.claimedBy === deviceId) return res.json(publicOrder(current, restaurant));
+        return res.status(409).json({ error: 'numar_ocupat' });
+      }
+      // comanda creata de bucatarie (sau eliberata), pe care inca nu o urmareste nimeni -> o preia acest client
+      const claimed = await ordersCollection.findOneAndUpdate(
+        { _id: current._id, clientCount: { $lt: 1 } },
+        { $set: { clientCount: 1, claimedBy: deviceId } },
+        { returnDocument: 'after' }
+      );
+      if (!claimed) return res.status(409).json({ error: 'numar_ocupat' });
+      return res.json(publicOrder(claimed, restaurant));
+    }
 
     const order = {
       _id: crypto.randomUUID(),
@@ -337,6 +351,7 @@ app.post('/api/r/:slug/orders', rateLimit(120, 10 * 60 * 1000), async (req, res)
       createdAt: Date.now(),
       readyAt: null,
       clientCount: 1,
+      claimedBy: deviceId,
       subscriptions: [],
     };
     await ordersCollection.insertOne(order);
@@ -497,8 +512,11 @@ app.post('/api/orders/release-by-number', requireRestaurant, async (req, res) =>
       readyAt: old.readyAt || null,
       clientCount: 0,
       subscriptions: [],
+      // telefonul care l-a scris gresit nu il mai poate prelua (nici cele blocate inainte)
+      blockedDevices: (old.blockedDevices || []).concat(old.claimedBy ? [old.claimedBy] : []).slice(-10),
     };
-    await ordersCollection.deleteMany({ _id: old._id });
+    // comanda veche ramane, cu starea "released" - asa telefonul gresit afla ce s-a intamplat
+    await ordersCollection.updateOne({ _id: old._id }, { $set: { status: 'released', releasedAt: Date.now() } });
     await ordersCollection.insertOne(fresh);
     res.json(publicOrder(fresh));
   } catch (err) {
